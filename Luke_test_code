@@ -1,0 +1,197 @@
+// This is test code for the Obstacle Avoiding Car
+// Still needs to be updated properly for better functionality and obstacle avoidance
+// 10-16-2024
+
+#include <NewPing.h>
+#include <Servo.h>
+
+#define MAX_DISTANCE 100 
+#define MAX_SPEED 255  // Maximum PWM value
+#define DEFAULT_SPEED 150  // Default speed
+
+NewPing sonar(13, 12, MAX_DISTANCE); // Trig = 13, Echo = 12
+
+int motorIn1Front = A5;
+int motorIn2Front = A4;
+int motorIn3Front = A3;
+int motorIn4Front = A2;
+int motorIn1Back = 7;
+int motorIn2Back = 8;
+int motorIn3Back = 9;
+int motorIn4Back = 10;
+
+int hBridgeEnRight = 6;
+int hBridgeEnLeft = 11;
+
+int servoPin = 5;
+
+Servo myServo; // creates object for servo
+
+boolean goesForward = false;
+int distance = 100;
+int motorSpeed = MAX_SPEED; // Global speed variable
+
+void setup() {
+  // Set motor pins as OUTPUT
+  pinMode(motorIn1Front, OUTPUT);
+  pinMode(motorIn2Front, OUTPUT);
+  pinMode(motorIn3Front, OUTPUT);
+  pinMode(motorIn4Front, OUTPUT);
+  pinMode(hBridgeEnRight, OUTPUT);
+  
+  pinMode(motorIn1Back, OUTPUT);
+  pinMode(motorIn2Back, OUTPUT);
+  pinMode(motorIn3Back, OUTPUT);
+  pinMode(motorIn4Back, OUTPUT);
+  pinMode(hBridgeEnLeft, OUTPUT);
+  
+  // Initialize servo
+  myServo.attach(servoPin);
+  myServo.write(115);
+  delay(2000);
+  
+  // Initialize serial communication
+  Serial.begin(9600);
+
+  // Initialize ping sensor readings
+  distance = readPing();
+  delay(100);
+}
+
+void loop() {
+  int distanceR = 0;
+  int distanceL = 0;
+  delay(40);
+
+  // Read the ping distance
+  distance = readPing();
+
+  // Print the distance to the Serial Monitor
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  if (distance <= 25) {
+    moveStop();
+    delay(100);
+    moveBackward(); // Uses global motorSpeed
+    delay(100);
+    moveStop();
+    delay(200);
+    distanceR = lookRight();
+    delay(200);
+    distanceL = lookLeft();
+    delay(200);
+
+    if (distanceR >= distanceL) {
+      turnRight();
+      moveStop();
+    } else {
+      turnLeft();
+      moveStop();
+    }
+  } else {
+    moveForward(); // Uses global motorSpeed
+  }
+}
+
+int lookRight() {
+  myServo.write(50);
+  delay(250);
+  int distance = readPing();
+  delay(100);
+  myServo.write(115);
+  return distance;
+}
+
+int lookLeft() {
+  myServo.write(170);
+  delay(250);
+  int distance = readPing();
+  delay(100);
+  myServo.write(115);
+  return distance;
+}
+
+int readPing() {
+  delay(100);
+  int cm = sonar.ping_cm();
+  if (cm == 0) {
+    cm = 250;
+  }
+  return cm;
+}
+
+void moveStop() {
+  digitalWrite(hBridgeEnRight, LOW);
+  digitalWrite(hBridgeEnLeft, LOW);
+}
+
+void moveForward() {
+  if (!goesForward) {
+    goesForward = true;
+    
+    analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
+    analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+    
+    digitalWrite(motorIn1Front, HIGH);
+    digitalWrite(motorIn2Front, LOW);
+    digitalWrite(motorIn3Front, HIGH);
+    digitalWrite(motorIn4Front, LOW);
+    
+    digitalWrite(motorIn1Back, HIGH);
+    digitalWrite(motorIn2Back, LOW);
+    digitalWrite(motorIn3Back, HIGH);
+    digitalWrite(motorIn4Back, LOW);
+  }
+}
+
+void moveBackward() {
+  goesForward = false;
+  
+  analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
+  analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+  
+  digitalWrite(motorIn1Front, LOW);
+  digitalWrite(motorIn2Front, HIGH);
+  digitalWrite(motorIn3Front, LOW);
+  digitalWrite(motorIn4Front, HIGH);
+  
+  digitalWrite(motorIn1Back, LOW);
+  digitalWrite(motorIn2Back, HIGH);
+  digitalWrite(motorIn3Back, LOW);
+  digitalWrite(motorIn4Back, HIGH);
+}
+
+void turnRight() {
+  analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
+  analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+
+  digitalWrite(motorIn1Front, HIGH);
+  digitalWrite(motorIn2Front, LOW);
+  digitalWrite(motorIn3Front, LOW);
+  digitalWrite(motorIn4Front, HIGH);
+
+  digitalWrite(motorIn1Back, HIGH);
+  digitalWrite(motorIn2Back, LOW);
+  digitalWrite(motorIn3Back, LOW);
+  digitalWrite(motorIn4Back, HIGH);
+
+  delay(500);
+}
+
+void turnLeft() {
+  analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
+  analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+
+  digitalWrite(motorIn1Front, LOW);
+  digitalWrite(motorIn2Front, HIGH);
+  digitalWrite(motorIn3Front, HIGH);
+  digitalWrite(motorIn4Front, LOW);
+
+  digitalWrite(motorIn1Back, LOW);
+  digitalWrite(motorIn2Back, HIGH);
+  digitalWrite(motorIn3Back, HIGH);
+  digitalWrite(motorIn4Back, LOW);
+
+  delay(500);
+}
