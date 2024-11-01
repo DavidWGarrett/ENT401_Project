@@ -236,7 +236,7 @@ bool turnLeftOrRight() {
 void checkAcceleration() {
   // Check if ay or ax exceeds 10000, if so, turn off the wheels
   // Value of 10000 was determined based on relative position of MPU6050 with Car chassis
-  if (abs(ay) > 10000 || ax > 1000)) {
+  if (abs(ay) > 10000 || abs(ax) > 1000)) {
     turnWheelsOff();
     delay(1000);
     moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
