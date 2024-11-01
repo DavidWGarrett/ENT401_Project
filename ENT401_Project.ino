@@ -8,8 +8,18 @@
 // Servo motor turns the ping sensor. Determines if objects are close on left and right side of car
 
 #include "car.h"
+#include "MPU6050.h"
+#include "I2Cdev.h"
+
+MPU6050 accelgyro;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
 
 void setup() {
+  // join I2C bus (I2Cdev library doesn't do this automatically
+
+  Wire.begin();
+  accelgyro.initialize();
 
   // set pinmode to output for all the motor pins
   for (int i = 0; i < ARRAY_LENGTH(motorArray); i++) {
