@@ -27,14 +27,30 @@ void setup() {
   Serial.begin(BAUD_RATE);
 }
 
+
 void loop() {
+  // read raw accel/gyro measurements from the MPU-6050
+  accelgyro.getAcceleration(&ax, &ay, &az);
+  accelgyro.getRotation(&gx, &gy, &gz);
+  
+  // Display the MPU-6050 Values in row format
+  Serial.print("a/g:\t");
+  Serial.print(ax); Serial.print("\t");
+  Serial.print(ay); Serial.print("\t");
+  Serial.print(az); Serial.print("\t");
+  Serial.print(gx); Serial.print("\t");
+  Serial.print(gy); Serial.print("\t");
+  Serial.println(gz);
+
+  checkAcceleration(); // Get the Cars relative acceleration
+  
+
   moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
   pingSensorSpin(); // spins servo
+  delay(50);
   int distance = findPingDistance();
   carDirection(changeRate(distance), distance);
-
 }
-
 void moveCar(int rate, bool leftTireForward, bool rightTireForward, int timeDelay)
 {
     for (int i = 0; i < ARRAY_LENGTH(hBridgeEn); i++) {
@@ -205,4 +221,14 @@ bool turnLeftOrRight() {
   
   if ( distanceLeft > distanceRight ) { return LEFT_SIDE_GREATER_DISTANCE; } 
   else { return RIGHT_SIDE_GREATER_DISTANCE; }
+}
+
+void checkAcceleration() {
+  // Check if ay or ax exceeds 10000, if so, turn off the wheels
+  // Value of 10000 was determined based on relative position of MPU6050 with Car chassis
+  if (abs(ay) > 10000 || ax > 1000)) {
+    turnWheelsOff();
+    delay(1000);
+    moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
+  }
 }
