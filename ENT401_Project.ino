@@ -8,6 +8,10 @@
 // Servo motor turns the ping sensor. Determines if objects are close on left and right side of car
 
 #include "car.h"
+#include "MPU6050.h"
+#include "I2Cdev.h"
+
+void school_code();
 
 void setup() {
 
@@ -24,14 +28,19 @@ void setup() {
   pinMode(PING_ECHO, INPUT);
 
   moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // makes the motors work properly, needs to be high speed before going sloW
-  Serial.begin(BAUD_RATE);
+  Serial.begin(38400);
+
+  Wire.begin();
+
+  
 }
 
 void loop() {
-  moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
+  //moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
   pingSensorSpin(); // spins servo
   int distance = findPingDistance();
   carDirection(changeRate(distance), distance);
+  school_code();
 
 }
 
@@ -115,6 +124,15 @@ int findPingDistance() { // function converts value from ping sensor to distance
   // 343 m/s and or 34.3 cm/ms -- speed of sound
   // ping sensor measures echo, time for echo return equals the amount of distance
 
+  Serial.print("Ping1: ");
+  Serial.print(ping1);
+  Serial.print(", Ping2: ");
+  Serial.print(ping2);
+  Serial.print(", Ping3: ");
+  Serial.print(ping3);
+  Serial.print(", Ping4: ");
+  Serial.println(ping4);
+  
   // Returns the largest distance from four consecutive ping values
   // Corrects for false positives where ping sensor randomly outputs a value of 0
   if ( ping1 > ping2 && ping1 > ping1 && ping3 && ping1 > ping4 ) { return ping1; } 
@@ -172,9 +190,15 @@ void carDirection (int rate, int distance) {
     moveCar(MAX_SPEED, MOVE_BACKWARDS, REVERSE_CAR_DELAY);
     bool moveRight = turnLeftOrRight();
 
+    Serial.print("moveRight: ");
+    Serial.print(moveRight);
+    Serial.print("\n\n\n\n\n\n");
+
     // if left, turn right. If right, turn left
     if (moveRight) { moveCar(CAR_TURN_SPEED, TURN_RIGHT, MOVE_CAR_DELAY); } 
     else { moveCar(CAR_TURN_SPEED, TURN_LEFT, MOVE_CAR_DELAY); }
+
+    delay(1000);
 
     moveCar(rate, MOVE_FORWARD, MOVE_CAR_DELAY); 
   }
@@ -196,6 +220,12 @@ bool turnLeftOrRight() {
   delay(SERVO_MAX_DELAY);
   for (int i = 0; i < 3; i++) { distanceRight = findPingDistance(); }
 
+  Serial.print("DistLeft: ");
+  Serial.print(distanceLeft);
+  Serial.print("DistRight: ");
+  Serial.print(distanceRight);
+  Serial.print("\n\n\n\n\n");
+
   ///////////////////
 
   myServo.write(SERVO_CENTER_POSITION);
@@ -205,4 +235,27 @@ bool turnLeftOrRight() {
   
   if ( distanceLeft > distanceRight ) { return LEFT_SIDE_GREATER_DISTANCE; } 
   else { return RIGHT_SIDE_GREATER_DISTANCE; }
+}
+
+void school_code() 
+{
+MPU6050 accelgyro;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+// read raw accel/gyro measurements from device
+accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+// these methods (and a few others) are also available
+//accelgyro.getAcceleration(&ax, &ay, &az);
+//accelgyro.getRotation(&gx, &gy, &gz);
+// display tab-separated accel/gyro x/y/z values
+Serial.print("a/g:\t");
+Serial.print(ax); Serial.print("\t");
+Serial.print(ay); Serial.print("\t");
+Serial.print(az); Serial.print("\t");
+Serial.print(gx); Serial.print("\t");
+Serial.print(gy); Serial.print("\t");
+Serial.println(gz);
+// blink LED to indicate activity
+
 }

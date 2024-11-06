@@ -75,10 +75,10 @@ bool turnLeftOrRight();
 ///////////////////////////////////////
 
 // pins for the h-bridge
-int motorIn1Front = A5;
-int motorIn2Front = A4;
-int motorIn3Front = A3;
-int motorIn4Front = A2;
+int motorIn1Front = A3;
+int motorIn2Front = A2;
+int motorIn3Front = A1;
+int motorIn4Front = A0;
 int hBridgeEnRight = 6;
 int motorIn1Back = 7;
 int motorIn2Back = 8;
