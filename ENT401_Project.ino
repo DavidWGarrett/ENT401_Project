@@ -8,8 +8,7 @@
 // Servo motor turns the ping sensor. Determines if objects are close on left and right side of car
 
 #include "car.h"
-#include "MPU6050.h"
-#include "I2Cdev.h"
+
 
 void school_code();
 
@@ -32,14 +31,14 @@ void setup() {
 
   Wire.begin();
 
-  
+  calibrateSensor();
 }
 
 void loop() {
   //moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
-  pingSensorSpin(); // spins servo
-  int distance = findPingDistance();
-  carDirection(changeRate(distance), distance);
+  //pingSensorSpin(); // spins servo
+  //int distance = findPingDistance();
+  //carDirection(changeRate(distance), distance);
   school_code();
 
 }
@@ -239,23 +238,50 @@ bool turnLeftOrRight() {
 
 void school_code() 
 {
-MPU6050 accelgyro;
-int16_t ax, ay, az;
-int16_t gx, gy, gz;
 
 // read raw accel/gyro measurements from device
-accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+//accelerometer.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 // these methods (and a few others) are also available
-//accelgyro.getAcceleration(&ax, &ay, &az);
+accelerometer.getAcceleration(&ax, &ay, &az);
 //accelgyro.getRotation(&gx, &gy, &gz);
 // display tab-separated accel/gyro x/y/z values
-Serial.print("a/g:\t");
-Serial.print(ax); Serial.print("\t");
-Serial.print(ay); Serial.print("\t");
-Serial.print(az); Serial.print("\t");
-Serial.print(gx); Serial.print("\t");
-Serial.print(gy); Serial.print("\t");
-Serial.println(gz);
-// blink LED to indicate activity
+Serial.print("ax: ");
+Serial.print(ax-axOffset); Serial.print("\tay: ");
+Serial.print(ay-ayOffset); Serial.print("\taz: ");
+Serial.print(az-azOffset); Serial.print("\n");
+delay(100);
+}
 
+void calibrateSensor() {
+  int32_t axSum = 0, aySum = 0, azSum = 0;
+  int32_t axMax = 0, ayMax = 0, azMax = 0;
+  int32_t axMin = 0, ayMin = 0, azMin = 0; 
+
+  for (int i = 0; i < 100; i++) {
+    // Get acceleration values
+    accelerometer.getAcceleration(&ax, &ay, &az);
+
+    // Update sum for averaging
+    axSum += ax;
+    aySum += ay;
+    azSum += az;
+
+    // Update max and min values for each axis
+    if (ax > axMax) axMax = ax;
+    if (ax < axMin) axMin = ax;
+
+    if (ay > ayMax) ayMax = ay;
+    if (ay < ayMin) ayMin = ay;
+
+    if (az > azMax) azMax = az;
+    if (az < azMin) azMin = az;
+
+    // Short delay to allow stable readings
+    delay(100);
+  }
+
+  // Calculate average values
+  axOffset = axSum / 100;
+  ayOffset = aySum / 100;
+  azOffset = azSum / 100;
 }

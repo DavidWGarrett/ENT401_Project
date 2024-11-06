@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Servo.h>  // includes servo header
+#include "MPU6050.h"
+#include "I2Cdev.h"
 
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof(x[0]))  // Determines the length of arrow
 #define PING_DISTANCE(x) ((x/29)/2)
@@ -56,6 +58,7 @@ void printPingDistance();
 int changeRate(int distance);
 void carDirection(int rate, int direction);
 bool turnLeftOrRight();
+void calibrateSensor();
 
 //////////////////////////////////
 //FRONT IN1/IN2 ---- Front Right Tire
@@ -111,3 +114,10 @@ int ping4 = 200;
 // 1 = Turn center
 int servoDirection = SERVO_TURNING_LEFT;
 int servoPosition = SERVO_CENTER_POSITION;
+
+MPU6050 accelerometer;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+int16_t axOffset, ayOffset, azOffset;
+int16_t axMax, axMin, ayMax, ayMin, azMax, azMin;
