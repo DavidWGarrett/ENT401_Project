@@ -14,6 +14,9 @@ void school_code();
 
 void setup() {
 
+  Serial.begin(38400);
+  Wire.begin();
+
   // set pinmode to output for all the motor pins
   for (int i = 0; i < ARRAY_LENGTH(motorArray); i++) {
     pinMode(motorArray[i], OUTPUT);
@@ -26,22 +29,46 @@ void setup() {
   pinMode(PING_TRIG, OUTPUT);
   pinMode(PING_ECHO, INPUT);
 
-  moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // makes the motors work properly, needs to be high speed before going sloW
-  Serial.begin(38400);
+  pinMode(CONFIRM_BUTTON, INPUT_PULLUP);  // Set pin 4 as input with internal pull-up resistor
+  attachInterrupt(digitalPinToInterrupt(CONFIRM_BUTTON), isUpright, FALLING);  // Attach interrupt
 
-  Wire.begin();
+  moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // makes the motors work properly, needs to be high speed before going sloW
 
   calibrateSensor();
+
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(RED_LED_BUZZER, OUTPUT);
+
+  delay(1000);
+  switchLED(GREEN);
+  delay(10000);
 }
 
 void loop() {
-  //moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY); // drives forward
-  //pingSensorSpin(); // spins servo
-  //int distance = findPingDistance();
-  //carDirection(changeRate(distance), distance);
-  school_code();
+  moveCar(MAX_SPEED, MOVE_FORWARD, MOVE_CAR_DELAY);
+  pingSensorSpin(); // spins servo
+  int distance = findPingDistance();
+  carDirection(changeRate(distance), distance);
+  //school_code();
+  
+  accelerometer.getAcceleration(&ax, &ay, &az);
+  fallenOver = checkFalling();
+  Serial.print(fallenOver);
+  Serial.print("< fallen over\n4\n");
+  if (fallenOver) { Serial.print("5\n"); setAlarm(); }
 
-}
+  //int buttonState = 0;
+
+  //buttonState = digitalRead(CONFIRM_BUTTON);  // Read the state of the button
+
+  //if (buttonState == LOW) {  // Button is pressed (because of pull-up, LOW means pressed)
+   // Serial.println("Button pressed");
+  //} else {  // Button is not pressed
+    //Serial.println("Button not pressed");
+  //}
+
+  delay(100);  // Small delay to debounce the button
+} 
 
 void moveCar(int rate, bool leftTireForward, bool rightTireForward, int timeDelay)
 {
@@ -69,6 +96,8 @@ void changeCarSpeed(int rate)
 }
 
 void turnWheelsOff() { // Shuts off all the tires
+
+  Serial.print("9\n");
   for (int i = 0; i < ARRAY_LENGTH(hBridgeEn); i++) {
     digitalWrite(hBridgeEn[i], LOW);
   }
@@ -248,7 +277,11 @@ accelerometer.getAcceleration(&ax, &ay, &az);
 Serial.print("ax: ");
 Serial.print(ax-axOffset); Serial.print("\tay: ");
 Serial.print(ay-ayOffset); Serial.print("\taz: ");
-Serial.print(az-azOffset); Serial.print("\n");
+Serial.print(az-azOffset+16384); Serial.print("\n");
+Serial.print(az); 
+Serial.print("\t"); 
+Serial.print(ax); 
+Serial.print("\n");
 delay(100);
 }
 
@@ -277,11 +310,65 @@ void calibrateSensor() {
     if (az < azMin) azMin = az;
 
     // Short delay to allow stable readings
-    delay(100);
+    delay(50);
   }
+
+  Serial.print(axSum);
 
   // Calculate average values
   axOffset = axSum / 100;
   ayOffset = aySum / 100;
   azOffset = azSum / 100;
+
+  Serial.print(axOffset);
+}
+
+bool checkFalling() {
+  // Check if ay or ax exceeds 10000, if so, stop wheels and servo/ping sensor
+  Serial.print("1\n");
+      Serial.print(ax-axOffset);
+    Serial.print("\n");
+    Serial.print(ay-ayOffset);
+    Serial.print("\n");
+    Serial.print(az-azOffset);
+    Serial.print("\n");
+    Serial.print(az-azOffset-16384);
+    Serial.print("\n");
+  if ((abs(ax-axOffset) < 10000) && (abs(ay-ayOffset) < 10000) && (abs(az-azOffset) < 5000)) {
+    return false;
+  } 
+  else  { Serial.print("3\n"); return true; }
+}
+
+void setAlarm() {
+  while (fallenOver) {
+    Serial.print("6\n");
+    delay(10);
+    turnWheelsOff();  // Stop the wheels
+    delay(10);
+    Serial.print("8\n");
+    switchLED(RED);
+    Serial.print("7\n");
+    delay(10);  // Pause briefly to let the servo move to center
+    Serial.print("setAlarm");
+  }
+}
+
+void isUpright() {
+  fallenOver = false;  // Set fallOver to false when the button is pushed
+  switchLED(GREEN);
+}
+
+void switchLED(bool light) {
+  if (light == GREEN)
+  {
+    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(RED_LED_BUZZER, HIGH);
+  }
+
+  else if (light == RED)
+  {
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED_BUZZER, LOW);
+  }
 }

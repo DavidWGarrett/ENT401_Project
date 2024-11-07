@@ -1,11 +1,33 @@
 #pragma once
 
-#include <Servo.h>  // includes servo header
+#include <Servo.h>
 #include "MPU6050.h"
 #include "I2Cdev.h"
 
+// Pin 0: Unused
+// Pin 1: Unused
+// Pin 2: Button For Confirming Car Is Upright
+// Pin 3: Red LED/Active Buzzer
+// Pin 4: Green LED
+// Pin 5: Servo 
+// Pin 6: H-Bridge Enables for right side tires
+// Pin 7: H-Bridge Right-Side Back Tire Forward
+// Pin 8: H-Bridge Right-Side Back Tire Reverse
+// Pin 9: H-Bridge Left-Side Back Tire Forward
+// Pin 10: H-Bridge Left-Side Back Tire Reverse
+// Pin 11: H-Bridge Enables For Left Side Tires
+// Pin 12: Ping Sensor Echo
+// Pin 13: Ping Sensor Trig
+// Pin A0: H-Bridge Left-Side Front Tire Reverse
+// Pin A1: H-Bridge Left-Side Front Tire Forward
+// Pin A2: H-Bridge Right-Side Front Tire Reverse
+// Pin A3: H-Bridge Right-Side Front Tire Forward
+// Pin A4: Accelerometer SDA
+// Pin A5: Accelerometer SCL
+
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof(x[0]))  // Determines the length of arrow
 #define PING_DISTANCE(x) ((x/29)/2)
+// #defind ACCELERATION(X) ((
 
 #define SERVO_CENTER_POSITION 90
 #define SERVO_TURN_SPEED 10
@@ -46,6 +68,16 @@
 #define LEFT_SIDE_GREATER_DISTANCE true
 #define RIGHT_SIDE_GREATER_DISTANCE false
 
+#define ACCELEROMETER_DEADZONE 200
+#define ACCELEROMETER_FALL_THRESHOLD 1000
+
+#define CONFIRM_BUTTON 2
+#define GREEN_LED 3
+#define RED_LED_BUZZER 4
+
+#define GREEN true
+#define RED false
+
 void setup();
 void loop();
 void moveCar();
@@ -59,6 +91,10 @@ int changeRate(int distance);
 void carDirection(int rate, int direction);
 bool turnLeftOrRight();
 void calibrateSensor();
+bool checkFalling();
+void setAlarm();
+void isUpright();
+void switchLED(bool light);
 
 //////////////////////////////////
 //FRONT IN1/IN2 ---- Front Right Tire
@@ -121,3 +157,6 @@ int16_t gx, gy, gz;
 
 int16_t axOffset, ayOffset, azOffset;
 int16_t axMax, axMin, ayMax, ayMin, azMax, azMin;
+
+const int confirmUprightButton = 4;
+bool fallenOver = false;
