@@ -1,20 +1,24 @@
-// This is test code for the Obstacle Avoiding Car
-// Still needs to be updated properly for better functionality and obstacle avoidance
-// 10-16-2024
+//Test Code for ENT 401 Project
+// Utilizes Servo.h header for servo
+// No continuous oscillation of servo however
 
 #include <NewPing.h>
 #include <Servo.h>
+#include "MPU6050.h"
+#include "I2Cdev.h"
 
+#define SENSE_DISTANCE 25
 #define MAX_DISTANCE 100 
 #define MAX_SPEED 255  // Maximum PWM value
 #define DEFAULT_SPEED 150  // Default speed
+#define SERVO_CENTER_POSITION 115
 
 NewPing sonar(13, 12, MAX_DISTANCE); // Trig = 13, Echo = 12
 
-int motorIn1Front = A5;
-int motorIn2Front = A4;
-int motorIn3Front = A3;
-int motorIn4Front = A2;
+int motorIn1Front = A3;
+int motorIn2Front = A2;
+int motorIn3Front = A1;
+int motorIn4Front = A0;
 int motorIn1Back = 7;
 int motorIn2Back = 8;
 int motorIn3Back = 9;
@@ -24,82 +28,145 @@ int hBridgeEnRight = 6;
 int hBridgeEnLeft = 11;
 
 int servoPin = 5;
+int buzzerPin = 3; // Add your buzzer pin here
+int Pushbutton = 4; // Define pushbutton pin
 
 Servo myServo; // creates object for servo
 
 boolean goesForward = false;
+boolean stopDueToAcceleration = false;
+boolean buzzerState = false;
+int buttonState;
 int distance = 100;
 int motorSpeed = MAX_SPEED; // Global speed variable
+int turnMotorSpeed = 200;
+long lastBuzzerToggle = 0;
+
+MPU6050 accelerometer;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
 
 void setup() {
-  // Set motor pins as OUTPUT
+  Wire.begin();
+  accelerometer.initialize();
+  // Motor pin setups
   pinMode(motorIn1Front, OUTPUT);
   pinMode(motorIn2Front, OUTPUT);
   pinMode(motorIn3Front, OUTPUT);
   pinMode(motorIn4Front, OUTPUT);
   pinMode(hBridgeEnRight, OUTPUT);
-  
   pinMode(motorIn1Back, OUTPUT);
   pinMode(motorIn2Back, OUTPUT);
   pinMode(motorIn3Back, OUTPUT);
   pinMode(motorIn4Back, OUTPUT);
   pinMode(hBridgeEnLeft, OUTPUT);
-  
-  // Initialize servo
-  myServo.attach(servoPin);
-  myServo.write(115);
-  delay(2000);
-  
-  // Initialize serial communication
-  Serial.begin(9600);
+  pinMode(buzzerPin, OUTPUT);   // Set buzzer pin as OUTPUT
+  pinMode(Pushbutton, INPUT);   // Set pushbutton as INPUT
 
-  // Initialize ping sensor readings
+  myServo.attach(servoPin);
+  myServo.write(SERVO_CENTER_POSITION);
+  delay(2000);
+  Serial.begin(38400);
   distance = readPing();
   delay(100);
 }
 
 void loop() {
-  int distanceR = 0;
-  int distanceL = 0;
-  delay(40);
+  checkAcceleration(); // Check acceleration-based stop
+  if (!stopDueToAcceleration) {
+    int distanceR = 0;
+    int distanceL = 0;
+    delay(40);
 
-  // Read the ping distance
-  distance = readPing();
+    // Read the ping distance
+    distance = readPing();
 
-  // Print the distance to the Serial Monitor
-  Serial.print("Distance: ");
-  Serial.println(distance);
+    // Print the distance to the Serial Monitor
+    Serial.print("Front Distance: ");
+    Serial.println(distance);
 
-  if (distance <= 25) {
-    moveStop();
-    delay(100);
-    moveBackward(); // Uses global motorSpeed
-    delay(100);
-    moveStop();
-    delay(200);
-    distanceR = lookRight();
-    delay(200);
-    distanceL = lookLeft();
-    delay(200);
-
-    if (distanceR >= distanceL) {
-      turnRight();
+    if (distance <= SENSE_DISTANCE) {
       moveStop();
+      delay(100);
+      moveBackward(); // Uses global motorSpeed
+      delay(500); // Move backward for half a second (adjust as needed)
+      moveStop();
+      delay(200);
+      distanceR = lookRight();
+      delay(200);
+      distanceL = lookLeft();
+      delay(200);
+
+      // Print the left and right distances to the Serial Monitor
+      Serial.print("Right Distance: ");
+      Serial.println(distanceR);
+      Serial.print("Left Distance: ");
+      Serial.println(distanceL);
+
+      if (distanceR >= distanceL) {
+        Serial.println("Turning Right");
+        turnRight();
+        moveStop();
+      } else {
+        Serial.println("Turning Left");
+        turnLeft();
+        moveStop();
+      }
     } else {
-      turnLeft();
-      moveStop();
+      moveForward(); // Uses global motorSpeed
     }
-  } else {
-    moveForward(); // Uses global motorSpeed
   }
 }
 
+void checkAcceleration() {
+  // Read accelerometer values
+  accelerometer.getAcceleration(&ax, &ay, &az);
+  
+  // Print accelerometer data to Serial Monitor
+  Serial.print("Acceleration X: ");
+  Serial.print(ax);
+  Serial.print(" | Y: ");
+  Serial.print(ay);
+  Serial.print(" | Z: ");
+  Serial.println(az);
+
+  if (!stopDueToAcceleration && (abs(ay) > 10000 || abs(ax) > 10000)) {
+    stopDueToAcceleration = true;
+    turnWheelsOff();
+    myServo.write(SERVO_CENTER_POSITION);
+    delay(50);
+    moveBackward();
+    delay(1);
+    moveStop();
+  }
+
+  if (stopDueToAcceleration) {
+    buttonState = digitalRead(Pushbutton);
+    if (buttonState == HIGH) {
+      delay(10); // debounce delay
+      stopDueToAcceleration = false;
+      digitalWrite(buzzerPin, LOW); 
+    } else {
+      turnWheelsOff();
+
+      if (millis() - lastBuzzerToggle >= 500) {
+        buzzerState = !buzzerState;
+        digitalWrite(buzzerPin, buzzerState);
+        lastBuzzerToggle = millis();
+      }
+      return;
+    }
+  }
+  if (!stopDueToAcceleration) {
+    digitalWrite(buzzerPin, HIGH); 
+  }
+}
 int lookRight() {
   myServo.write(50);
   delay(250);
   int distance = readPing();
   delay(100);
-  myServo.write(115);
+  myServo.write(SERVO_CENTER_POSITION);
   return distance;
 }
 
@@ -108,7 +175,7 @@ int lookLeft() {
   delay(250);
   int distance = readPing();
   delay(100);
-  myServo.write(115);
+  myServo.write(SERVO_CENTER_POSITION);
   return distance;
 }
 
@@ -163,8 +230,8 @@ void moveBackward() {
 }
 
 void turnRight() {
-  analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
-  analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+  analogWrite(hBridgeEnRight, turnMotorSpeed); // Set speed for right side motors
+  analogWrite(hBridgeEnLeft, turnMotorSpeed);  // Set speed for left side motors
 
   digitalWrite(motorIn1Front, HIGH);
   digitalWrite(motorIn2Front, LOW);
@@ -176,12 +243,12 @@ void turnRight() {
   digitalWrite(motorIn3Back, LOW);
   digitalWrite(motorIn4Back, HIGH);
 
-  delay(500);
+  delay(1000);
 }
 
 void turnLeft() {
-  analogWrite(hBridgeEnRight, motorSpeed); // Set speed for right side motors
-  analogWrite(hBridgeEnLeft, motorSpeed);  // Set speed for left side motors
+  analogWrite(hBridgeEnRight, turnMotorSpeed); // Set speed for right side motors
+  analogWrite(hBridgeEnLeft, turnMotorSpeed);  // Set speed for left side motors
 
   digitalWrite(motorIn1Front, LOW);
   digitalWrite(motorIn2Front, HIGH);
@@ -193,5 +260,10 @@ void turnLeft() {
   digitalWrite(motorIn3Back, HIGH);
   digitalWrite(motorIn4Back, LOW);
 
-  delay(500);
+  delay(1000);
+}
+
+void turnWheelsOff() {
+  digitalWrite(hBridgeEnRight, LOW);
+  digitalWrite(hBridgeEnLeft, LOW);
 }
